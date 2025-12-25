@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>학생 관리 - 학원 관리 시스템</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f3f4f6;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: white;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            font-size: 20px;
+            color: #333;
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+        
+        .btn-secondary {
+            background: #e5e7eb;
+            color: #333;
+        }
+        
+        .btn-secondary:hover {
+            background: #d1d5db;
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+        
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        
+        .page-header h2 {
+            font-size: 28px;
+            color: #333;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        thead {
+            background: #f9fafb;
+        }
+        
+        th, td {
+            padding: 16px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        th {
+            font-weight: 600;
+            color: #374151;
+            font-size: 14px;
+        }
+        
+        td {
+            color: #6b7280;
+            font-size: 14px;
+        }
+        
+        tbody tr:hover {
+            background: #f9fafb;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .badge-active {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .badge-inactive {
+            background: #fee;
+            color: #991b1b;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #666;
+        }
+        
+        .empty {
+            text-align: center;
+            padding: 60px;
+            color: #999;
+        }
+        
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏫 학원 관리 시스템</h1>
+        <div class="header-actions">
+            <a href="/dashboard" class="btn btn-secondary">← 대시보드</a>
+            <button class="btn btn-danger" onclick="logout()">로그아웃</button>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="page-header">
+            <h2>👨‍🎓 학생 관리</h2>
+            <a href="/students-create" class="btn btn-primary">+ 학생 추가</a>
+        </div>
+        
+        <div id="errorMessage" class="error" style="display: none;"></div>
+        
+        <div class="card">
+            <div id="loading" class="loading">
+                로딩 중...
+            </div>
+            
+            <div id="empty" class="empty" style="display: none;">
+                등록된 학생이 없습니다.<br>
+                <a href="/students-create" class="btn btn-primary" style="margin-top: 16px;">첫 학생 추가하기</a>
+            </div>
+            
+            <table id="studentsTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>이름</th>
+                        <th>학교</th>
+                        <th>학년</th>
+                        <th>학생 연락처</th>
+                        <th>학부모 연락처</th>
+                        <th>상태</th>
+                        <th>등록일</th>
+                        <th>작업</th>
+                    </tr>
+                </thead>
+                <tbody id="studentsBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <script>
+        // 페이지 로드 시 학생 목록 가져오기
+        window.addEventListener('DOMContentLoaded', loadStudents);
+        
+        async function loadStudents() {
+            const token = localStorage.getItem('access_token');
+            
+            if (!token) {
+                window.location.href = '/login';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/students/', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.status === 401) {
+                    localStorage.removeItem('access_token');
+                    window.location.href = '/login';
+                    return;
+                }
+                
+                if (!response.ok) {
+                    throw new Error('학생 목록을 불러올 수 없습니다');
+                }
+                
+                const students = await response.json();
+                
+                document.getElementById('loading').style.display = 'none';
+                
+                if (students.length === 0) {
+                    document.getElementById('empty').style.display = 'block';
+                } else {
+                    displayStudents(students);
+                }
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('errorMessage').textContent = error.message;
+                document.getElementById('errorMessage').style.display = 'block';
+            }
+        }
+        
+        function displayStudents(students) {
+            const tbody = document.getElementById('studentsBody');
+            tbody.innerHTML = '';
+            
+            students.forEach(student => {
+                const row = document.createElement('tr');
+                
+                const createdDate = new Date(student.created_at).toLocaleDateString('ko-KR');
+                const statusBadge = student.is_active 
+                    ? '<span class="badge badge-active">활성</span>'
+                    : '<span class="badge badge-inactive">비활성</span>';
+                
+                // 카카오 연동 상태
+                const kakaoStatus = student.kakao_user_id 
+                    ? '<span style="color: #10b981;">✓ 연동됨</span>'
+                    : '<a href="/student-invite?studentId=' + student.id + '" style="color: #667eea;">📱 초대하기</a>';
+                
+                row.innerHTML = `
+                    <td><strong>${student.name}</strong></td>
+                    <td>${student.school || '-'}</td>
+                    <td>${student.grade || '-'}</td>
+                    <td>${student.phone || '-'}</td>
+                    <td>${student.parent_phone}</td>
+                    <td>${statusBadge}<br><small>${kakaoStatus}</small></td>
+                    <td>${createdDate}</td>
+                    <td>
+                        <div class="actions">
+                            <a href="/students-edit/${student.id}" class="btn btn-secondary">수정</a>
+                            ${student.is_active ? 
+                                `<button class="btn btn-danger" onclick="deleteStudent(${student.id}, '${student.name}')">삭제</button>` 
+                                : ''}
+                        </div>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+            
+            document.getElementById('studentsTable').style.display = 'table';
+        }
+        
+        async function deleteStudent(id, name) {
+            if (!confirm(`"${name}" 학생을 삭제하시겠습니까?\n(실제로는 비활성화되며, 데이터는 보존됩니다)`)) {
+                return;
+            }
+            
+            const token = localStorage.getItem('access_token');
+            
+            try {
+                const response = await fetch(`/students/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    alert('학생이 삭제되었습니다.');
+                    loadStudents(); // 목록 새로고침
+                } else {
+                    throw new Error('삭제에 실패했습니다');
+                }
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+        
+        function logout() {
+            if (confirm('로그아웃 하시겠습니까?')) {
+                localStorage.removeItem('access_token');
+                window.location.href = '/login';
+            }
+        }
+    </script>
+</body>
+</html>
+

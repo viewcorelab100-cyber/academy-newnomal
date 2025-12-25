@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>대시보드 - 학원 관리 시스템</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f3f4f6;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: white;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            font-size: 20px;
+            color: #333;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .user-email {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .logout-btn {
+            background: #ef4444;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        
+        .logout-btn:hover {
+            background: #dc2626;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+        
+        .welcome {
+            background: white;
+            padding: 32px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 32px;
+        }
+        
+        .welcome h2 {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 12px;
+        }
+        
+        .welcome p {
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+        }
+        
+        .menu-card {
+            background: white;
+            padding: 32px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        .menu-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        .menu-card h3 {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 12px;
+        }
+        
+        .menu-card p {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏫 학원 관리 시스템</h1>
+        <div class="user-info">
+            <span class="user-email" id="userEmail">로딩 중...</span>
+            <button class="logout-btn" onclick="logout()">로그아웃</button>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="welcome">
+            <h2>환영합니다! 👋</h2>
+            <p id="welcomeMessage">로딩 중...</p>
+        </div>
+        
+        <div class="menu-grid">
+            <a href="/docs" target="_blank" class="menu-card">
+                <h3>📚 API 문서</h3>
+                <p>모든 API 엔드포인트를 확인하고 테스트할 수 있습니다.</p>
+            </a>
+            
+            <a href="/students-list" class="menu-card">
+                <h3>👨‍🎓 학생 관리</h3>
+                <p>학생 정보 등록, 조회, 수정 및 삭제를 관리합니다.</p>
+            </a>
+            
+            <div class="menu-card" onclick="alert('반 관리 페이지는 개발 중입니다!')">
+                <h3>📖 반 관리</h3>
+                <p>반별 정보, 수업 일정, 수강료를 관리합니다.</p>
+            </div>
+            
+            <a href="/attendance-check" class="menu-card">
+                <h3>✅ 출석 체크</h3>
+                <p>학생들의 등원/하원 시간을 기록합니다.</p>
+            </a>
+            
+            <div class="menu-card" onclick="alert('청구/결제 페이지는 개발 중입니다!')">
+                <h3>💰 청구/결제</h3>
+                <p>월별 자동 청구서 생성 및 납부 상태를 관리합니다.</p>
+            </div>
+            
+            <div class="menu-card" onclick="alert('상담 노트 페이지는 개발 중입니다!')">
+                <h3>📋 상담 노트</h3>
+                <p>학생별 상담 내용을 기록하고 학부모와 공유합니다.</p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 페이지 로드 시 사용자 정보 가져오기
+        window.addEventListener('DOMContentLoaded', async () => {
+            const token = localStorage.getItem('access_token');
+            
+            // 토큰이 없으면 로그인 페이지로
+            if (!token) {
+                window.location.href = '/login';
+                return;
+            }
+            
+            try {
+                // 사용자 정보 API 호출
+                const response = await fetch('/auth/me', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const user = await response.json();
+                    
+                    // 사용자 정보 표시
+                    document.getElementById('userEmail').textContent = user.email;
+                    document.getElementById('welcomeMessage').textContent = 
+                        `${user.full_name}님, 오늘도 좋은 하루 되세요! 학원 관리 시스템에 로그인되었습니다.`;
+                } else {
+                    // 토큰이 유효하지 않음
+                    localStorage.removeItem('access_token');
+                    window.location.href = '/login';
+                }
+            } catch (error) {
+                // 네트워크 에러
+                alert('서버에 연결할 수 없습니다.');
+                window.location.href = '/login';
+            }
+        });
+        
+        // 로그아웃 함수
+        function logout() {
+            if (confirm('로그아웃 하시겠습니까?')) {
+                localStorage.removeItem('access_token');
+                window.location.href = '/login';
+            }
+        }
+    </script>
+</body>
+</html>
+

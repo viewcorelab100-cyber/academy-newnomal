@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>로그인 - 학원 관리 시스템</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .login-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            width: 100%;
+            padding: 40px;
+        }
+        
+        h1 {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        button {
+            width: 100%;
+            background: #667eea;
+            color: white;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.2s;
+        }
+        
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            font-size: 14px;
+        }
+        
+        .success-message {
+            background: #efe;
+            color: #3c3;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            font-size: 14px;
+        }
+        
+        .demo-info {
+            background: #f3f4f6;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 13px;
+            color: #666;
+        }
+        
+        .demo-info strong {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1>🏫 로그인</h1>
+        <p class="subtitle">학원 관리 시스템</p>
+        
+        <div class="error-message" id="errorMessage"></div>
+        <div class="success-message" id="successMessage"></div>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">이메일</label>
+                <input 
+                    type="email" 
+                    id="email" 
+                    name="email" 
+                    placeholder="admin@academy.com"
+                    required
+                    autocomplete="email"
+                >
+            </div>
+            
+            <div class="form-group">
+                <label for="password">비밀번호</label>
+                <input 
+                    type="password" 
+                    id="password" 
+                    name="password" 
+                    placeholder="비밀번호를 입력하세요"
+                    required
+                    autocomplete="current-password"
+                >
+            </div>
+            
+            <button type="submit" id="loginButton">로그인</button>
+        </form>
+        
+        <div class="demo-info">
+            <strong>테스트 계정</strong><br>
+            이메일: admin@academy.com<br>
+            비밀번호: admin123
+        </div>
+    </div>
+    
+    <script>
+        // 로그인 폼 처리
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const loginButton = document.getElementById('loginButton');
+            const errorMessage = document.getElementById('errorMessage');
+            const successMessage = document.getElementById('successMessage');
+            
+            // 에러/성공 메시지 초기화
+            errorMessage.style.display = 'none';
+            successMessage.style.display = 'none';
+            
+            // 버튼 비활성화
+            loginButton.disabled = true;
+            loginButton.textContent = '로그인 중...';
+            
+            try {
+                // API 호출
+                const response = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // 로그인 성공
+                    // JWT 토큰을 localStorage에 저장
+                    localStorage.setItem('access_token', data.access_token);
+                    
+                    // 성공 메시지 표시
+                    successMessage.textContent = '로그인 성공! 대시보드로 이동합니다...';
+                    successMessage.style.display = 'block';
+                    
+                    // 1초 후 대시보드로 이동
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 1000);
+                } else {
+                    // 로그인 실패
+                    errorMessage.textContent = data.detail || '이메일 또는 비밀번호가 올바르지 않습니다.';
+                    errorMessage.style.display = 'block';
+                    
+                    // 버튼 다시 활성화
+                    loginButton.disabled = false;
+                    loginButton.textContent = '로그인';
+                }
+            } catch (error) {
+                // 네트워크 에러
+                errorMessage.textContent = '서버에 연결할 수 없습니다. 나중에 다시 시도해주세요.';
+                errorMessage.style.display = 'block';
+                
+                // 버튼 다시 활성화
+                loginButton.disabled = false;
+                loginButton.textContent = '로그인';
+            }
+        });
+        
+        // 이미 로그인되어 있는지 확인
+        window.addEventListener('DOMContentLoaded', async () => {
+            const token = localStorage.getItem('access_token');
+            if (token) {
+                // 토큰이 유효한지 확인
+                try {
+                    const response = await fetch('/auth/me', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        // 이미 로그인되어 있음
+                        window.location.href = '/dashboard';
+                    }
+                } catch (error) {
+                    // 토큰이 유효하지 않음, 로그인 페이지 표시
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+

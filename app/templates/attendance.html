@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>출석 체크 - 학원 관리 시스템</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f3f4f6;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: white;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            font-size: 20px;
+            color: #333;
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-secondary {
+            background: #e5e7eb;
+            color: #333;
+        }
+        
+        .btn-secondary:hover {
+            background: #d1d5db;
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+        
+        .page-header {
+            margin-bottom: 32px;
+        }
+        
+        .page-header h2 {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .page-header p {
+            color: #666;
+        }
+        
+        .date-selector {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .date-selector input {
+            padding: 10px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .date-selector button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .date-selector button:hover {
+            background: #5568d3;
+        }
+        
+        .students-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+        }
+        
+        .student-card {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .student-card h3 {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .student-info {
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+        
+        .attendance-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        
+        .btn-check-in {
+            padding: 12px;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn-check-in:hover:not(:disabled) {
+            background: #059669;
+            transform: translateY(-2px);
+        }
+        
+        .btn-check-in:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+        }
+        
+        .btn-check-out {
+            padding: 12px;
+            background: #f59e0b;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn-check-out:hover:not(:disabled) {
+            background: #d97706;
+            transform: translateY(-2px);
+        }
+        
+        .btn-check-out:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            margin-top: 12px;
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 13px;
+            text-align: center;
+        }
+        
+        .status-none {
+            background: #f3f4f6;
+            color: #6b7280;
+        }
+        
+        .status-in {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status-out {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .status-complete {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #666;
+        }
+        
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+        }
+        
+        .success {
+            background: #d1fae5;
+            color: #065f46;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏫 학원 관리 시스템</h1>
+        <div class="header-actions">
+            <a href="/dashboard" class="btn btn-secondary">← 대시보드</a>
+            <button class="btn btn-danger" onclick="logout()">로그아웃</button>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="page-header">
+            <h2>✅ 출석 체크</h2>
+            <p>학생들의 등원/하원을 체크하세요</p>
+        </div>
+        
+        <div class="date-selector">
+            <label for="date">날짜:</label>
+            <input type="date" id="date" />
+            <button onclick="loadAttendance()">조회</button>
+            <button onclick="setToday()" class="btn-secondary">오늘</button>
+        </div>
+        
+        <div id="errorMessage" class="error" style="display: none;"></div>
+        <div id="successMessage" class="success" style="display: none;"></div>
+        
+        <div id="loading" class="loading">
+            로딩 중...
+        </div>
+        
+        <div id="studentsGrid" class="students-grid" style="display: none;">
+        </div>
+    </div>
+    
+    <script>
+        let students = [];
+        let attendances = [];
+        let selectedDate = new Date().toISOString().split('T')[0];
+        
+        // 페이지 로드 시
+        window.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                window.location.href = '/login';
+                return;
+            }
+            
+            setToday();
+            loadStudents();
+        });
+        
+        // 오늘 날짜로 설정
+        function setToday() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('date').value = today;
+            selectedDate = today;
+            loadAttendance();
+        }
+        
+        // 학생 목록 로드
+        async function loadStudents() {
+            const token = localStorage.getItem('access_token');
+            
+            try {
+                const response = await fetch('/students/', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!response.ok) throw new Error('학생 목록을 불러올 수 없습니다');
+                
+                students = await response.json();
+                await loadAttendance();
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+        
+        // 출석 기록 로드
+        async function loadAttendance() {
+            const token = localStorage.getItem('access_token');
+            const date = document.getElementById('date').value;
+            selectedDate = date;
+            
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('studentsGrid').style.display = 'none';
+            
+            try {
+                const response = await fetch(`/attendance/?date=${date}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!response.ok) throw new Error('출석 기록을 불러올 수 없습니다');
+                
+                attendances = await response.json();
+                renderStudents();
+                
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('studentsGrid').style.display = 'grid';
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                showError(error.message);
+            }
+        }
+        
+        // 학생 카드 렌더링
+        function renderStudents() {
+            const grid = document.getElementById('studentsGrid');
+            grid.innerHTML = '';
+            
+            students.forEach(student => {
+                const card = createStudentCard(student);
+                grid.appendChild(card);
+            });
+        }
+        
+        // 학생 카드 생성
+        function createStudentCard(student) {
+            const card = document.createElement('div');
+            card.className = 'student-card';
+            
+            // 오늘의 출석 기록 찾기
+            const todayAttendances = attendances.filter(a => a.student_id === student.id);
+            const hasIn = todayAttendances.some(a => a.type === 'in');
+            const hasOut = todayAttendances.some(a => a.type === 'out');
+            
+            // 상태 텍스트
+            let statusText = '미체크';
+            let statusClass = 'status-none';
+            
+            if (hasIn && hasOut) {
+                statusText = '등원/하원 완료 ✓';
+                statusClass = 'status-complete';
+            } else if (hasIn) {
+                statusText = '등원 완료';
+                statusClass = 'status-in';
+            } else if (hasOut) {
+                statusText = '하원만 체크됨';
+                statusClass = 'status-out';
+            }
+            
+            card.innerHTML = `
+                <h3>${student.name}</h3>
+                <div class="student-info">
+                    ${student.school || '-'} ${student.grade || ''}
+                </div>
+                <div class="attendance-buttons">
+                    <button 
+                        class="btn-check-in" 
+                        onclick="checkAttendance(${student.id}, 'in', '${student.name}')"
+                        ${hasIn ? 'disabled' : ''}
+                    >
+                        🏫 등원 ${hasIn ? '✓' : ''}
+                    </button>
+                    <button 
+                        class="btn-check-out" 
+                        onclick="checkAttendance(${student.id}, 'out', '${student.name}')"
+                        ${hasOut ? 'disabled' : ''}
+                    >
+                        🏠 하원 ${hasOut ? '✓' : ''}
+                    </button>
+                </div>
+                <div class="status ${statusClass}">${statusText}</div>
+            `;
+            
+            return card;
+        }
+        
+        // 출석 체크
+        async function checkAttendance(studentId, type, studentName) {
+            const token = localStorage.getItem('access_token');
+            const typeKr = type === 'in' ? '등원' : '하원';
+            
+            if (!confirm(`${studentName} 학생의 ${typeKr}을 체크하시겠습니까?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/attendance/check', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        student_id: studentId,
+                        type: type
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showSuccess(`${studentName} 학생의 ${typeKr}이 체크되었습니다!`);
+                    await loadAttendance(); // 새로고침
+                } else {
+                    throw new Error(data.detail || '출석 체크에 실패했습니다');
+                }
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+        
+        // 에러 메시지 표시
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+        
+        // 성공 메시지 표시
+        function showSuccess(message) {
+            const successDiv = document.getElementById('successMessage');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                successDiv.style.display = 'none';
+            }, 3000);
+        }
+        
+        // 로그아웃
+        function logout() {
+            if (confirm('로그아웃 하시겠습니까?')) {
+                localStorage.removeItem('access_token');
+                window.location.href = '/login';
+            }
+        }
+    </script>
+</body>
+</html>
+
