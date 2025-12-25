@@ -20,6 +20,14 @@ class Settings(BaseSettings):
     KAKAO_ALIMTALK_TEMPLATE_BILLING: str = ""
     KAKAO_ALIMTALK_TEMPLATE_OVERDUE: str = ""
     
+    # Kakao OAuth
+    KAKAO_REST_KEY: str = ""  # 카카오 REST API 키 (Client ID)
+    KAKAO_CLIENT_SECRET: Optional[str] = None  # 카카오 Client Secret (선택사항)
+    KAKAO_REDIRECT_URI: str = "http://localhost:8000/auth/kakao/callback"  # 카카오 Redirect URI
+    
+    # App Settings
+    BASE_URL: str = "http://localhost:8000"  # 애플리케이션 기본 URL
+    
     class Config:
         env_file = ".env"
         case_sensitive = True

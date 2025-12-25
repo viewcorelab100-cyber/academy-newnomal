@@ -3,6 +3,7 @@ import json
 from typing import Dict, Any, Optional
 from datetime import datetime
 from sqlalchemy.orm import Session
+from fastapi import HTTPException
 from app.config import settings
 from app.models.message_log import MessageLog
 
@@ -178,6 +179,92 @@ class KakaoService:
         return await KakaoService.send_alimtalk(
             db, parent_phone, template_id, variables
         )
+    
+    # ===== OAuth 관련 메서드 =====
+    
+    @staticmethod
+    async def get_kakao_access_token(authorization_code: str) -> Dict[str, Any]:
+        """
+        카카오 인가 코드로 액세스 토큰 받기
+        
+        Args:
+            authorization_code: 카카오 인가 코드
+            
+        Returns:
+            액세스 토큰 정보 (access_token, refresh_token, expires_in 등)
+        """
+        token_url = "https://kauth.kakao.com/oauth/token"
+        
+        data = {
+            "grant_type": "authorization_code",
+            "client_id": settings.KAKAO_REST_KEY,
+            "redirect_uri": settings.KAKAO_REDIRECT_URI,
+            "code": authorization_code,
+        }
+        
+        # Client Secret이 있는 경우 추가
+        if settings.KAKAO_CLIENT_SECRET:
+            data["client_secret"] = settings.KAKAO_CLIENT_SECRET
+        
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    token_url,
+                    data=data,
+                    headers={"Content-Type": "application/x-www-form-urlencoded"},
+                    timeout=10.0
+                )
+                
+                if response.status_code != 200:
+                    error_data = response.json()
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"카카오 토큰 요청 실패: {error_data.get('error_description', '알 수 없는 오류')}"
+                    )
+                
+                return response.json()
+                
+        except httpx.HTTPError as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"카카오 API 통신 오류: {str(e)}"
+            )
+    
+    @staticmethod
+    async def get_kakao_user_info(access_token: str) -> Dict[str, Any]:
+        """
+        카카오 액세스 토큰으로 사용자 정보 조회
+        
+        Args:
+            access_token: 카카오 액세스 토큰
+            
+        Returns:
+            사용자 정보 (id, kakao_account 등)
+        """
+        user_info_url = "https://kapi.kakao.com/v2/user/me"
+        
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    user_info_url,
+                    headers={"Authorization": f"Bearer {access_token}"},
+                    timeout=10.0
+                )
+                
+                if response.status_code != 200:
+                    error_data = response.json()
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"카카오 사용자 정보 조회 실패: {error_data.get('msg', '알 수 없는 오류')}"
+                    )
+                
+                return response.json()
+                
+        except httpx.HTTPError as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"카카오 API 통신 오류: {str(e)}"
+            )
 
 
 kakao_service = KakaoService()

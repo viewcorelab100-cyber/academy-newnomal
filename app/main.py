@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import auth, students, classes, enrollments, attendance, billing, counseling, student_invite, student_auth
+from app.api import auth, students, classes, enrollments, attendance, billing, counseling, student_invite, student_auth, kakao_oauth
 from app.database import Base, engine
 
 # 데이터베이스 테이블 생성
@@ -31,6 +31,7 @@ app.include_router(auth.router)
 app.include_router(students.router)
 app.include_router(student_invite.router)
 app.include_router(student_auth.router)
+app.include_router(kakao_oauth.router)  # 카카오 OAuth 플로우
 app.include_router(classes.router)
 app.include_router(enrollments.router)
 app.include_router(attendance.router)
@@ -91,13 +92,6 @@ async def attendance_check_page():
 async def student_invite_page():
     """학생 초대 페이지"""
     with open("app/templates/student-invite.html", "r", encoding="utf-8") as f:
-        return f.read()
-
-
-@app.get("/student/signup", response_class=HTMLResponse)
-async def student_signup_page():
-    """학생 가입 페이지"""
-    with open("app/templates/student-signup.html", "r", encoding="utf-8") as f:
         return f.read()
 
 
