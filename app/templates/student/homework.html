@@ -1,0 +1,422 @@
+{% extends "base.html" %}
+
+{% block title %}숙제 - Student{% endblock %}
+
+{% block content %}
+<div x-data="studentHomework()" x-init="init()" class="min-h-screen bg-[#F4F6F9] pb-24">
+    <header class="bg-white px-6 pt-12 pb-6 rounded-b-[2.5rem] shadow-[0_4px_20px_rgb(0,0,0,0.03)]">
+        <div class="flex items-center gap-4 mb-4">
+            <a href="/student/dashboard" class="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 hover:bg-slate-100">
+                <i data-lucide="arrow-left" class="w-5 h-5"></i>
+            </a>
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900">숙제</h1>
+                <p class="text-sm text-slate-500">과제 확인 및 제출</p>
+            </div>
+        </div>
+    </header>
+
+    <div class="px-6 py-8">
+        <div class="space-y-4">
+            <template x-for="homework in homeworks" :key="homework.id">
+                <div class="bg-white rounded-3xl shadow-lg p-6 border border-slate-100">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex-1">
+                            <h3 class="text-lg font-bold text-slate-900 mb-2" x-text="homework.title"></h3>
+                            <p class="text-sm text-slate-600 mb-3" x-text="homework.description"></p>
+                            <div class="flex flex-wrap gap-2 mb-3">
+                                <span x-show="homework.subject" class="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs font-medium" x-text="homework.subject"></span>
+                                <span class="px-3 py-1 bg-orange-100 text-orange-700 rounded-lg text-xs font-medium" x-text="`마감: ${formatDate(homework.due_date)}`"></span>
+                            </div>
+                        </div>
+                        <div>
+                            <span x-show="homework.submission && homework.submission.status === 'submitted'" 
+                                  class="px-3 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-bold">
+                                ✓ 제출완료
+                            </span>
+                            <span x-show="homework.submission && homework.submission.status === 'graded'" 
+                                  class="px-3 py-1 bg-purple-100 text-purple-700 rounded-lg text-xs font-bold">
+                                ✓ 채점완료
+                            </span>
+                            <span x-show="!homework.submission || homework.submission.status === 'pending'" 
+                                  class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-lg text-xs font-bold">
+                                미제출
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <!-- Graded Info -->
+                    <div x-show="homework.submission && homework.submission.status === 'graded'" class="mb-4 p-4 bg-purple-50 rounded-xl">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i data-lucide="star" class="w-4 h-4 text-purple-600"></i>
+                            <span class="font-bold text-purple-900">채점 결과</span>
+                        </div>
+                        <p class="text-sm text-purple-800 mb-1">
+                            <strong>점수:</strong> <span x-text="homework.submission?.grade || '-'"></span>
+                        </p>
+                        <p class="text-sm text-purple-800" x-show="homework.submission?.feedback">
+                            <strong>피드백:</strong> <span x-text="homework.submission?.feedback || '-'"></span>
+                        </p>
+                    </div>
+                    
+                    <!-- Submitted Files Preview -->
+                    <div x-show="homework.submission && homework.submission.files && homework.submission.files.length > 0" class="mb-4">
+                        <div class="font-medium text-slate-900 mb-2 text-sm">제출한 사진:</div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <template x-for="file in (homework.submission?.files || [])" :key="file.id">
+                                <div class="relative w-full h-24 bg-slate-100 rounded-lg overflow-hidden">
+                                    <img :src="file.file_url" 
+                                         :alt="file.file_name"
+                                         @error="$event.target.style.display='none'; $event.target.nextElementSibling.style.display='flex'"
+                                         class="w-full h-full object-cover">
+                                    <div style="display:none" class="absolute inset-0 flex-col items-center justify-center text-slate-400">
+                                        <i data-lucide="image-off" class="w-6 h-6 mb-1"></i>
+                                        <span class="text-xs">이미지 없음</span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>                    
+                    <!-- Submit Button -->
+                    <div class="flex gap-2">
+                        <button @click="openSubmitModal(homework)" 
+                                x-show="!homework.submission || homework.submission.status === 'pending'"
+                                class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition flex items-center justify-center gap-2">
+                            <i data-lucide="upload" class="w-5 h-5"></i>
+                            <span>제출하기</span>
+                        </button>
+                        <button @click="openSubmitModal(homework)" 
+                                x-show="homework.submission && homework.submission.status !== 'pending' && homework.submission.status !== 'graded'"
+                                class="flex-1 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold transition flex items-center justify-center gap-2">
+                            <i data-lucide="edit" class="w-5 h-5"></i>
+                            <span>재제출하기</span>
+                        </button>
+                    </div>
+                </div>
+            </template>
+            
+            <div x-show="homeworks.length === 0" class="text-center py-16">
+                <div class="w-24 h-24 bg-slate-100 rounded-2xl mx-auto flex items-center justify-center mb-4">
+                    <i data-lucide="book-open" class="w-12 h-12 text-slate-400"></i>
+                </div>
+                <p class="text-slate-500">숙제가 없습니다</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Submit Modal -->
+    <div x-show="showSubmitModal" 
+         x-cloak
+         @click.self="showSubmitModal = false"
+         class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-8" @click.stop>
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-2xl font-bold text-slate-900">숙제 제출</h3>
+                <button @click="showSubmitModal = false" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            
+            <form @submit.prevent="submitHomework()">
+                <div class="mb-6">
+                    <h4 class="font-bold text-slate-900 mb-2" x-text="selectedHomework?.title"></h4>
+                    <p class="text-sm text-slate-600" x-text="selectedHomework?.description"></p>
+                </div>
+                
+                <!-- Photo Upload -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-slate-700 mb-2">
+                        사진 첨부 (선택)
+                    </label>
+                    
+                    <div class="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center">
+                        <input type="file" 
+                               x-ref="fileInput"
+                               @change="handleFileSelect($event)"
+                               accept="image/*"
+                               multiple
+                               class="hidden">
+                        
+                        <button type="button" 
+                                @click="$refs.fileInput.click()"
+                                class="mx-auto flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition">
+                            <i data-lucide="camera" class="w-5 h-5"></i>
+                            <span>사진 선택</span>
+                        </button>
+                        <p class="text-xs text-slate-500 mt-2">여러 장 선택 가능</p>
+                    </div>
+                    
+                    <!-- Preview Selected Photos -->
+                    <div x-show="selectedFiles.length > 0" class="mt-4">
+                        <div class="grid grid-cols-3 gap-2">
+                            <template x-for="(file, index) in selectedFiles" :key="index">
+                                <div class="relative">
+                                    <img :src="file.preview" 
+                                         :alt="file.name"
+                                         class="w-full h-24 object-cover rounded-lg">
+                                    <button type="button"
+                                            @click="removeFile(index)"
+                                            class="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition">
+                                        <i data-lucide="x" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Text Content -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-slate-700 mb-2">설명 (선택)</label>
+                    <textarea x-model="submissionContent" 
+                              rows="4" 
+                              placeholder="추가 설명을 입력하세요..."
+                              class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-blue-500 focus:border-blue-500"></textarea>
+                </div>
+                
+                <!-- Upload Progress -->
+                <div x-show="uploading" class="mb-6">
+                    <div class="flex items-center gap-3 p-4 bg-blue-50 rounded-xl">
+                        <div class="animate-spin">
+                            <i data-lucide="loader" class="w-5 h-5 text-blue-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="text-sm font-medium text-blue-900">업로드 중...</div>
+                            <div class="text-xs text-blue-600" x-text="`${uploadProgress.current} / ${uploadProgress.total}`"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end gap-3">
+                    <button type="button" @click="showSubmitModal = false" class="px-5 py-2 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition">취소</button>
+                    <button type="submit" :disabled="submitting || uploading" class="px-5 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition disabled:opacity-50">
+                        <span x-show="!submitting && !uploading">제출하기</span>
+                        <span x-show="submitting">제출 중...</span>
+                        <span x-show="uploading">업로드 중...</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="fixed bottom-6 left-6 right-6 z-50">
+        <nav class="bg-slate-900 text-slate-400 rounded-2xl shadow-2xl shadow-slate-900/30 px-6 py-4 flex justify-between items-center backdrop-blur-lg bg-opacity-90">
+            <a :href="`/student/dashboard?student_id=${studentId}`" class="flex flex-col items-center gap-1 hover:text-white transition-colors">
+                <i data-lucide="home" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium">홈</span>
+            </a>
+            <a :href="`/student/attendance?student_id=${studentId}`" class="flex flex-col items-center gap-1 hover:text-white transition-colors">
+                <i data-lucide="calendar" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium">출석</span>
+            </a>
+            <a :href="`/student/homework?student_id=${studentId}`" class="flex flex-col items-center gap-1 text-white">
+                <i data-lucide="book" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium">숙제</span>
+            </a>
+            <a href="/student/notices" class="flex flex-col items-center gap-1 hover:text-white transition-colors">
+                <i data-lucide="menu" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium">메뉴</span>
+            </a>
+        </nav>
+    </div>
+</div>
+
+<script>
+function studentHomework() {
+    return {
+        homeworks: [],
+        showSubmitModal: false,
+        selectedHomework: null,
+        submissionContent: '',
+        selectedFiles: [],
+        uploadedFiles: [],
+        submitting: false,
+        uploading: false,
+        uploadProgress: { current: 0, total: 0 },
+        studentId: null,
+        
+        async init() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const studentIdFromUrl = urlParams.get('student_id');
+            
+            // Try URL first, then localStorage
+            if (studentIdFromUrl) {
+                this.studentId = studentIdFromUrl;
+                localStorage.setItem('student_id', studentIdFromUrl);
+            } else {
+                this.studentId = localStorage.getItem('student_id');
+            }
+            
+            if (!this.studentId) {
+                alert('⚠️ 학생 ID가 필요합니다.\n\n학생 포털 홈에서 다시 접근하거나, 관리자가 제공한 링크를 사용하세요.');
+                window.location.href = '/student/portal';
+                return;
+            }
+            
+            await this.loadHomeworks();
+            lucide.createIcons();
+        },
+        
+        async loadHomeworks() {
+            try {
+                const response = await fetch(`/api/homeworks/student/list?student_id=${this.studentId}`);
+                
+                if (response.ok) {
+                    this.homeworks = await response.json();
+                    this.$nextTick(() => lucide.createIcons());
+                }
+            } catch (error) {
+                console.error('Failed to load homeworks:', error);
+            }
+        },
+        
+        openSubmitModal(homework) {
+            this.selectedHomework = homework;
+            this.submissionContent = homework.submission?.content || '';
+            this.selectedFiles = [];
+            this.uploadedFiles = [];
+            this.showSubmitModal = true;
+            this.$nextTick(() => lucide.createIcons());
+        },
+        
+        handleFileSelect(event) {
+            const files = Array.from(event.target.files);
+            
+            files.forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        this.selectedFiles.push({
+                            file: file,
+                            name: file.name,
+                            preview: e.target.result,
+                            size: file.size
+                        });
+                        this.$nextTick(() => lucide.createIcons());
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+            
+            event.target.value = '';
+        },
+        
+        removeFile(index) {
+            this.selectedFiles.splice(index, 1);
+        },
+        
+        async uploadFiles() {
+            if (this.selectedFiles.length === 0) {
+                return [];
+            }
+            
+            this.uploading = true;
+            this.uploadProgress = { current: 0, total: this.selectedFiles.length };
+            const uploadedFiles = [];
+            
+            for (let i = 0; i < this.selectedFiles.length; i++) {
+                const fileData = this.selectedFiles[i];
+                this.uploadProgress.current = i + 1;
+                
+                try {
+                    // Step 1: Get presigned URL
+                    const presignResponse = await fetch('/api/homeworks/uploads/presign', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            file_name: fileData.name,
+                            content_type: fileData.file.type
+                        })
+                    });
+                    
+                    if (!presignResponse.ok) {
+                        throw new Error('Presign request failed');
+                    }
+                    
+                    const { upload_url, file_key, public_url } = await presignResponse.json();
+                    
+                    // Step 2: Upload file (현재 구현: 로컬 시뮬레이션)
+                    const formData = new FormData();
+                    formData.append('file', fileData.file);
+                    
+                    // Note: 실제 프로덕션에서는 presigned URL로 직접 업로드
+                    // 현재는 로컬 엔드포인트로 업로드
+                    await fetch(upload_url, {
+                        method: 'POST',
+                        body: fileData.file
+                    });
+                    
+                    uploadedFiles.push({
+                        file_key: file_key,
+                        file_name: fileData.name,
+                        file_url: public_url,
+                        file_size: fileData.size,
+                        mime_type: fileData.file.type
+                    });
+                    
+                    // #region agent log
+                    fetch('http://127.0.0.1:7245/ingest/f668b17b-31e4-4961-b955-b3751e33c54d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'homework.html:after_upload',message:'File uploaded successfully',data:{file_name:fileData.name,public_url:public_url},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+                    // #endregion
+                } catch (error) {
+                    console.error('File upload failed:', error);
+                    alert(`❌ 파일 업로드 실패: ${fileData.name}`);
+                }
+            }
+            
+            this.uploading = false;
+            return uploadedFiles;
+        },
+        
+        async submitHomework() {
+            this.submitting = true;
+            
+            try {
+                // Upload files first
+                const uploadedFiles = await this.uploadFiles();
+                
+                // #region agent log
+                fetch('http://127.0.0.1:7245/ingest/f668b17b-31e4-4961-b955-b3751e33c54d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'homework.html:before_submit',message:'About to submit homework',data:{homework_id:this.selectedHomework.id,student_id:this.studentId,content:this.submissionContent,uploaded_files_count:uploadedFiles.length,uploaded_files:uploadedFiles},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+                // #endregion
+                
+                // Submit homework
+                const response = await fetch(`/api/homeworks/${this.selectedHomework.id}/submit?student_id=${this.studentId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        content: this.submissionContent,
+                        files: uploadedFiles
+                    })
+                });
+                
+                // #region agent log
+                fetch('http://127.0.0.1:7245/ingest/f668b17b-31e4-4961-b955-b3751e33c54d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'homework.html:after_submit',message:'Submit response received',data:{ok:response.ok,status:response.status},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+                // #endregion
+                
+                if (response.ok) {
+                    await this.loadHomeworks();
+                    this.showSubmitModal = false;
+                    this.submissionContent = '';
+                    this.selectedFiles = [];
+                    alert('✅ 숙제가 제출되었습니다!');
+                } else {
+                    const error = await response.json();
+                    alert(`❌ ${error.detail || '제출에 실패했습니다'}`);
+                }
+            } catch (error) {
+                console.error('Failed to submit homework:', error);
+                alert('서버 오류가 발생했습니다');
+            } finally {
+                this.submitting = false;
+            }
+        },
+        
+        formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
+        }
+    }
+}
+</script>
+{% endblock %}

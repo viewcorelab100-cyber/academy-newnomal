@@ -1,0 +1,991 @@
+{% extends "base.html" %}
+
+{% block title %}숙제 관리 - Academy Builder{% endblock %}
+
+{% block content %}
+<div x-data="homeworkManager()" x-init="init()" class="h-screen flex bg-[#F4F6F9] overflow-hidden">
+    <!-- Dynamic Sidebar -->
+    <aside class="w-20 lg:w-64 m-4 mr-0 bg-white rounded-3xl flex flex-col shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white z-20 shrink-0">
+        <div class="p-6 flex items-center justify-center lg:justify-start gap-3">
+            <a href="/admin/dashboard" class="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center shadow-lg shadow-slate-900/20 shrink-0">
+                <i data-lucide="layout-grid" class="w-5 h-5 text-white"></i>
+            </a>
+            <div class="hidden lg:block">
+                <h1 class="font-bold text-slate-900">Academy</h1>
+                <p class="text-[10px] font-bold text-slate-400 uppercase">Manager</p>
+            </div>
+        </div>
+        
+        <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+            <p class="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 hidden lg:block">Main</p>
+            <a href="/admin/dashboard" class="flex items-center gap-3 px-3 py-3 rounded-xl text-slate-500 hover:bg-slate-50 transition-all">
+                <i data-lucide="home" class="w-5 h-5"></i>
+                <span class="hidden lg:block text-sm">대시보드</span>
+            </a>
+            <a href="/admin/features" class="flex items-center gap-3 px-3 py-3 rounded-xl text-slate-500 hover:bg-slate-50 transition-all">
+                <i data-lucide="package" class="w-5 h-5"></i>
+                <span class="hidden lg:block text-sm">기능 빌더</span>
+            </a>
+            
+            <div class="my-4 border-t border-slate-100 hidden lg:block"></div>
+            <p class="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 hidden lg:block">Installed</p>
+            
+            <template x-for="feature in enabledFeatures" :key="feature.code">
+                <a :href="`/admin/${feature.code}`" 
+                   class="flex items-center gap-3 px-3 py-3 rounded-xl transition-all"
+                   :class="feature.code === 'homework' ? 'bg-slate-50 text-slate-900 font-bold' : 'text-slate-500 hover:bg-slate-50'">
+                    <div class="w-5 h-5 flex items-center justify-center">
+                        <i :data-lucide="feature.icon" class="w-5 h-5"></i>
+                    </div>
+                    <span class="hidden lg:block text-sm" x-text="feature.name"></span>
+                </a>
+            </template>
+        </nav>
+        
+        <div class="p-3">
+            <button @click="logout()" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-50 text-slate-500 hover:text-red-500 transition-all">
+                <i data-lucide="log-out" class="w-5 h-5"></i>
+                <span class="hidden lg:block text-xs">로그아웃</span>
+            </button>
+        </div>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto p-8">
+        <header class="mb-8">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center">
+                        <i data-lucide="book-open" class="w-7 h-7"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-3xl font-bold text-slate-900">숙제 관리</h2>
+                        <p class="text-slate-500 mt-1">반별 숙제 출제, 제출 현황 확인, 채점</p>
+                    </div>
+                </div>
+                <button @click="openCreateModal()" class="flex items-center gap-2 px-5 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition shadow-lg shadow-slate-900/20">
+                    <i data-lucide="plus" class="w-5 h-5"></i>
+                    <span>숙제 출제</span>
+                </button>
+            </div>
+        </header>
+        
+        <!-- Homework Filter -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-6">
+            <!-- 기본 필터 -->
+            <div class="flex items-center gap-4 mb-4">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="filter" class="w-5 h-5 text-slate-400"></i>
+                    <span class="text-sm font-bold text-slate-700">기본:</span>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button @click="homeworkFilter = 'all'" 
+                            :class="homeworkFilter === 'all' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+                            class="px-4 py-2 rounded-lg font-medium text-sm transition">
+                        전체 (<span x-text="homeworks.length"></span>)
+                    </button>
+                    <template x-for="subject in uniqueSubjects()" :key="subject">
+                        <button @click="homeworkFilter = subject" 
+                                :class="homeworkFilter === subject ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'"
+                                class="px-4 py-2 rounded-lg font-medium text-sm transition">
+                            <span x-text="subject"></span>
+                        </button>
+                    </template>
+                    <template x-for="grade in uniqueGrades()" :key="grade">
+                        <button @click="homeworkFilter = grade" 
+                                :class="homeworkFilter === grade ? 'bg-purple-600 text-white' : 'bg-purple-100 text-purple-700 hover:bg-purple-200'"
+                                class="px-4 py-2 rounded-lg font-medium text-sm transition">
+                            <span x-text="grade"></span>
+                        </button>
+                    </template>
+                </div>
+            </div>
+            
+            <!-- 마감기한별 필터 -->
+            <div class="flex items-center gap-4 mb-4">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="calendar" class="w-5 h-5 text-slate-400"></i>
+                    <span class="text-sm font-bold text-slate-700">마감기한:</span>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button @click="dueDateFilter = 'all'" 
+                            :class="dueDateFilter === 'all' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+                            class="px-4 py-2 rounded-lg font-medium text-sm transition">
+                        전체
+                    </button>
+                    <button @click="dueDateFilter = 'overdue'" 
+                            :class="dueDateFilter === 'overdue' ? 'bg-red-600 text-white' : 'bg-red-100 text-red-700 hover:bg-red-200'"
+                            class="px-4 py-2 rounded-lg font-medium text-sm transition">
+                        지난 마감
+                    </button>
+                    <button @click="dueDateFilter = 'today'" 
+                            :class="dueDateFilter === 'today' ? 'bg-orange-600 text-white' : 'bg-orange-100 text-orange-700 hover:bg-orange-200'"
+                            class="px-4 py-2 rounded-lg font-medium text-sm transition">
+                        오늘
+                    </button>
+                    <button @click="dueDateFilter = 'tomorrow'" 
+                            :class="dueDateFilter === 'tomorrow' ? 'bg-yellow-600 text-white' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'"
+                            class="px-4 py-2 rounded-lg font-medium text-sm transition">
+                        내일
+                    </button>
+                    <button @click="dueDateFilter = 'thisWeek'" 
+                            :class="dueDateFilter === 'thisWeek' ? 'bg-green-600 text-white' : 'bg-green-100 text-green-700 hover:bg-green-200'"
+                            class="px-4 py-2 rounded-lg font-medium text-sm transition">
+                        이번주
+                    </button>
+                    <button @click="dueDateFilter = 'nextWeek'" 
+                            :class="dueDateFilter === 'nextWeek' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'"
+                            class="px-4 py-2 rounded-lg font-medium text-sm transition">
+                        다음주
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 반별 필터 -->
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="users" class="w-5 h-5 text-slate-400"></i>
+                    <span class="text-sm font-bold text-slate-700">반별:</span>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button @click="classFilter = 'all'" 
+                            :class="classFilter === 'all' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+                            class="px-4 py-2 rounded-lg font-medium text-sm transition">
+                        전체 반
+                    </button>
+                    <template x-for="className in uniqueClasses()" :key="className">
+                        <button @click="classFilter = className" 
+                                :class="classFilter === className ? 'bg-indigo-600 text-white' : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'"
+                                class="px-4 py-2 rounded-lg font-medium text-sm transition">
+                            <span x-text="className"></span>
+                        </button>
+                    </template>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Homework List -->
+        <div class="grid grid-cols-1 gap-6">
+            <template x-for="homework in filteredHomeworks()" :key="homework.id">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-all">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex-1">
+                            <h3 class="text-xl font-bold text-slate-900 mb-2" x-text="homework.title"></h3>
+                            <p class="text-slate-600 text-sm mb-3" x-text="homework.description"></p>
+                            <div class="flex flex-wrap gap-2">
+                                <span x-show="homework.subject" class="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs font-medium" x-text="homework.subject"></span>
+                                <span x-show="homework.grade_level" class="px-3 py-1 bg-purple-100 text-purple-700 rounded-lg text-xs font-medium" x-text="homework.grade_level"></span>
+                                <span class="px-3 py-1 bg-orange-100 text-orange-700 rounded-lg text-xs font-medium flex items-center gap-1">
+                                    <i data-lucide="calendar" class="w-3 h-3"></i>
+                                    <span x-text="`마감: ${formatDate(homework.due_date)}`"></span>
+                                </span>
+                            </div>
+                            <div class="mt-2 flex items-center gap-2 text-sm">
+                                <i data-lucide="users" class="w-4 h-4 text-slate-400"></i>
+                                <span class="text-slate-600">
+                                    <span class="font-bold text-green-700" x-text="homework.target_count || 0"></span>명 ·
+                                    <span class="text-slate-500" x-text="formatClassNames(homework.class_names)"></span>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button @click="viewSubmissions(homework)" class="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition" title="제출 현황">
+                                <i data-lucide="clipboard-list" class="w-5 h-5"></i>
+                            </button>
+                            <button @click="deleteHomework(homework.id)" class="p-2 hover:bg-red-50 text-red-600 rounded-lg transition" title="삭제">
+                                <i data-lucide="trash-2" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </template>
+            
+            <div x-show="filteredHomeworks().length === 0" class="text-center py-16">
+                <div class="w-24 h-24 bg-slate-100 rounded-2xl mx-auto flex items-center justify-center mb-4">
+                    <i data-lucide="book-open" class="w-12 h-12 text-slate-400"></i>
+                </div>
+                <p class="text-slate-500 mb-4" x-text="homeworks.length === 0 ? '출제된 숙제가 없습니다' : '해당하는 숙제가 없습니다'"></p>
+                <button x-show="homeworks.length === 0" @click="openCreateModal()" class="px-4 py-2 bg-slate-900 text-white rounded-lg font-medium hover:bg-slate-800 transition">
+                    첫 숙제 출제하기
+                </button>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Create Modal -->
+    <div x-show="showCreateModal" 
+         x-cloak
+         @click.self="showCreateModal = false"
+         class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-8" @click.stop>
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-2xl font-bold text-slate-900">숙제 출제</h3>
+                <button @click="showCreateModal = false" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            
+            <form @submit.prevent="saveHomework()">
+                <!-- Step 1: 반 검색 및 선택 -->
+                <div class="mb-6 p-4 bg-blue-50 rounded-xl">
+                    <h4 class="font-bold text-slate-900 mb-3 flex items-center gap-2">
+                        <span class="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs">1</span>
+                        대상 반 선택
+                    </h4>
+                    
+                    <div class="mb-3">
+                        <input type="text" 
+                               x-model="classSearchQuery"
+                               @input="searchClasses()"
+                               placeholder="반 검색 (예: 중2, 수학반)"
+                               class="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    
+                    <div class="space-y-2 max-h-48 overflow-y-auto">
+                        <template x-for="cls in filteredClasses" :key="cls.id">
+                            <label class="flex items-center gap-3 p-3 bg-white rounded-lg hover:bg-slate-50 cursor-pointer transition">
+                                <input type="checkbox" 
+                                       :value="cls.id"
+                                       x-model="selectedClassIds"
+                                       @change="updateTargetPreview()"
+                                       class="w-4 h-4 text-blue-600 rounded">
+                                <div class="flex-1">
+                                    <div class="font-medium text-slate-900" x-text="cls.name"></div>
+                                    <div class="text-xs text-slate-500 flex gap-2">
+                                        <span x-show="cls.grade_level" x-text="cls.grade_level"></span>
+                                        <span x-show="cls.subject" x-text="`· ${cls.subject}`"></span>
+                                        <span x-text="`· ${cls.student_count}명`"></span>
+                                    </div>
+                                </div>
+                            </label>
+                        </template>
+                        
+                        <div x-show="filteredClasses.length === 0" class="text-center py-4 text-slate-500 text-sm">
+                            검색 결과가 없습니다
+                        </div>
+                    </div>
+                    
+                    <div x-show="selectedClassIds.length > 0" class="mt-3 p-3 bg-green-50 rounded-lg">
+                        <div class="text-sm font-bold text-green-900 mb-1">
+                            <i data-lucide="check-circle" class="w-4 h-4 inline"></i>
+                            선택된 반: <span x-text="selectedClassIds.length"></span>개
+                        </div>
+                        <div class="text-sm text-green-700">
+                            예상 대상 학생: <span class="font-bold" x-text="targetStudentCount"></span>명
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Step 2: 숙제 내용 입력 -->
+                <div class="mb-6 p-4 bg-slate-50 rounded-xl">
+                    <h4 class="font-bold text-slate-900 mb-3 flex items-center gap-2">
+                        <span class="w-6 h-6 bg-slate-600 text-white rounded-full flex items-center justify-center text-xs">2</span>
+                        숙제 내용
+                    </h4>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">제목 *</label>
+                            <input type="text" x-model="currentHomework.title" required
+                                   placeholder="예: 영어 단어 암기"
+                                   class="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">설명</label>
+                            <textarea x-model="currentHomework.description" rows="4"
+                                      placeholder="숙제 상세 내용을 입력하세요..."
+                                      class="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-blue-500 focus:border-blue-500"></textarea>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">과목</label>
+                                <input type="text" x-model="currentHomework.subject"
+                                       placeholder="예: 영어"
+                                       class="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">대상 학년</label>
+                                <input type="text" x-model="currentHomework.grade_level"
+                                       placeholder="예: 중2"
+                                       class="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">마감일</label>
+                            <input type="date" x-model="currentHomework.due_date"
+                                   class="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end gap-3">
+                    <button type="button" @click="showCreateModal = false" class="px-5 py-2 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition">취소</button>
+                    <button type="submit" :disabled="selectedClassIds.length === 0 || submitting" class="px-5 py-2 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition disabled:opacity-50">
+                        <span x-show="!submitting">출제하기</span>
+                        <span x-show="submitting">출제 중...</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Submissions Modal (작은 학생 카드 그리드) -->
+    <div x-show="showSubmissionsModal" 
+         x-cloak
+         @click.self="showSubmissionsModal = false"
+         class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto p-8" @click.stop>
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex-1">
+                    <h3 class="text-2xl font-bold text-slate-900" x-text="selectedHomework?.title"></h3>
+                    <div class="flex items-center gap-4 mt-3">
+                        <div class="flex items-center gap-2 px-4 py-2 bg-green-50 rounded-xl">
+                            <i data-lucide="check-circle" class="w-4 h-4 text-green-600"></i>
+                            <span class="text-sm font-bold text-green-700">제출</span>
+                            <span class="text-lg font-bold text-green-900" x-text="submissionStats.submitted"></span>
+                        </div>
+                        <div class="flex items-center gap-2 px-4 py-2 bg-yellow-50 rounded-xl">
+                            <i data-lucide="clock" class="w-4 h-4 text-yellow-600"></i>
+                            <span class="text-sm font-bold text-yellow-700">미제출</span>
+                            <span class="text-lg font-bold text-yellow-900" x-text="submissionStats.pending"></span>
+                        </div>
+                        <div class="flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-xl">
+                            <i data-lucide="bar-chart-3" class="w-4 h-4 text-blue-600"></i>
+                            <span class="text-sm font-bold text-blue-700">제출률</span>
+                            <span class="text-lg font-bold text-blue-900" x-text="`${submissionStats.rate}%`"></span>
+                        </div>
+                    </div>
+                </div>
+                <button @click="showSubmissionsModal = false" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            
+            <!-- Filter Buttons -->
+            <div class="flex gap-2 mb-6">
+                <button @click="submissionFilter = 'all'" 
+                        :class="submissionFilter === 'all' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+                        class="px-4 py-2 rounded-lg font-medium text-sm transition">
+                    전체 (<span x-text="submissions.length"></span>)
+                </button>
+                <button @click="submissionFilter = 'submitted'" 
+                        :class="submissionFilter === 'submitted' ? 'bg-green-600 text-white' : 'bg-green-100 text-green-700 hover:bg-green-200'"
+                        class="px-4 py-2 rounded-lg font-medium text-sm transition">
+                    제출 (<span x-text="submissionStats.submitted"></span>)
+                </button>
+                <button @click="submissionFilter = 'pending'" 
+                        :class="submissionFilter === 'pending' ? 'bg-yellow-600 text-white' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'"
+                        class="px-4 py-2 rounded-lg font-medium text-sm transition">
+                    미제출 (<span x-text="submissionStats.pending"></span>)
+                </button>
+                <button @click="submissionFilter = 'graded'" 
+                        :class="submissionFilter === 'graded' ? 'bg-purple-600 text-white' : 'bg-purple-100 text-purple-700 hover:bg-purple-200'"
+                        class="px-4 py-2 rounded-lg font-medium text-sm transition">
+                    채점완료 (<span x-text="submissionStats.graded"></span>)
+                </button>
+            </div>
+            
+            <!-- 작은 학생 카드 그리드 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <template x-for="sub in filteredSubmissions()" :key="sub.student_id">
+                    <div @click="openSubmissionDetail(sub)"
+                         class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer"
+                         :class="sub.status === 'submitted' || sub.status === 'graded' ? 'ring-2 ring-green-200' : ''">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold shadow-lg">
+                                    <span x-text="sub.student_name.charAt(0)"></span>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-slate-900" x-text="sub.student_name"></h3>
+                                    <p class="text-xs text-slate-400" x-text="sub.class_name"></p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Status Badge -->
+                        <div class="flex items-center justify-between">
+                            <span x-show="sub.status === 'submitted'" class="px-3 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-bold flex items-center gap-1">
+                                <i data-lucide="check-circle" class="w-3 h-3"></i>
+                                제출완료
+                            </span>
+                            <span x-show="sub.status === 'graded'" class="px-3 py-1 bg-purple-100 text-purple-700 rounded-lg text-xs font-bold flex items-center gap-1">
+                                <i data-lucide="star" class="w-3 h-3"></i>
+                                채점완료
+                            </span>
+                            <span x-show="sub.status === 'pending'" class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-lg text-xs font-bold flex items-center gap-1">
+                                <i data-lucide="clock" class="w-3 h-3"></i>
+                                미제출
+                            </span>
+                            
+                            <!-- Quick Info -->
+                            <div x-show="sub.submission?.files && sub.submission.files.length > 0" class="flex items-center gap-1 text-slate-500">
+                                <i data-lucide="image" class="w-3 h-3"></i>
+                                <span class="text-xs font-medium" x-text="sub.submission.files.length"></span>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+            
+            <div x-show="filteredSubmissions().length === 0" class="text-center py-16">
+                <div class="w-20 h-20 bg-slate-100 rounded-2xl mx-auto flex items-center justify-center mb-4">
+                    <i data-lucide="inbox" class="w-10 h-10 text-slate-400"></i>
+                </div>
+                <p class="text-slate-500">해당하는 제출이 없습니다</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Submission Detail Modal (학생 제출 상세 보기) -->
+    <div x-show="showSubmissionDetailModal" 
+         x-cloak
+         @click.self="showSubmissionDetailModal = false"
+         class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-8" @click.stop>
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white text-xl font-bold shadow-lg">
+                        <span x-text="selectedSubmission?.student_name.charAt(0)"></span>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-bold text-slate-900" x-text="selectedSubmission?.student_name"></h3>
+                        <p class="text-sm text-slate-500" x-text="selectedSubmission?.class_name"></p>
+                    </div>
+                </div>
+                <button @click="showSubmissionDetailModal = false" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            
+            <div x-show="selectedSubmission?.submission" class="space-y-6">
+                <!-- Text Content -->
+                <div x-show="selectedSubmission?.submission?.content" class="p-6 bg-slate-50 rounded-2xl">
+                    <div class="flex items-center gap-2 mb-3">
+                        <i data-lucide="message-square" class="w-5 h-5 text-slate-600"></i>
+                        <h4 class="font-bold text-slate-900">제출 내용</h4>
+                    </div>
+                    <p class="text-slate-700 whitespace-pre-wrap" x-text="selectedSubmission?.submission?.content || '-'"></p>
+                </div>
+                
+                <!-- Submitted Files/Photos (큰 사이즈로 표시) -->
+                <div x-show="selectedSubmission?.submission?.files && selectedSubmission.submission.files.length > 0" class="p-6 bg-slate-50 rounded-2xl">
+                    <div class="flex items-center gap-2 mb-4">
+                        <i data-lucide="image" class="w-5 h-5 text-slate-600"></i>
+                        <h4 class="font-bold text-slate-900">제출 사진 (<span x-text="selectedSubmission?.submission?.files?.length || 0"></span>장)</h4>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <template x-for="(file, idx) in (selectedSubmission?.submission?.files || [])" :key="idx">
+                            <div class="relative group">
+                                <img :src="file.file_url" 
+                                     :alt="file.file_name"
+                                     class="w-full h-64 object-cover rounded-xl border-2 border-slate-200 cursor-pointer hover:scale-[1.02] transition-transform"
+                                     @click="window.open(file.file_url, '_blank')">
+                                <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
+                                    <i data-lucide="expand" class="w-8 h-8 text-white"></i>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                
+                <!-- Grading Section -->
+                <div x-show="selectedSubmission?.status === 'graded'" class="p-6 bg-purple-50 rounded-2xl border-2 border-purple-200">
+                    <div class="flex items-center gap-2 mb-4">
+                        <i data-lucide="award" class="w-5 h-5 text-purple-700"></i>
+                        <h4 class="font-bold text-purple-900">채점 결과</h4>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="flex items-center gap-3">
+                            <span class="text-sm font-medium text-purple-700">점수:</span>
+                            <span class="text-2xl font-bold text-purple-900" x-text="selectedSubmission?.submission?.grade || '-'"></span>
+                        </div>
+                        <div x-show="selectedSubmission?.submission?.feedback">
+                            <span class="text-sm font-medium text-purple-700 block mb-2">피드백:</span>
+                            <p class="text-sm text-purple-800 bg-white p-4 rounded-xl" x-text="selectedSubmission?.submission?.feedback"></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Grade Button (if submitted but not graded) -->
+                <button x-show="selectedSubmission?.status === 'submitted'" 
+                        @click="openGradeModal(selectedSubmission)"
+                        class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition flex items-center justify-center gap-2 shadow-lg">
+                    <i data-lucide="edit-3" class="w-5 h-5"></i>
+                    채점하기
+                </button>
+            </div>
+            
+            <!-- Empty State for Pending -->
+            <div x-show="selectedSubmission?.status === 'pending'" class="text-center py-16">
+                <div class="w-24 h-24 bg-slate-100 rounded-2xl mx-auto flex items-center justify-center mb-4">
+                    <i data-lucide="inbox" class="w-12 h-12 text-slate-400"></i>
+                </div>
+                <p class="text-slate-500 text-lg">아직 제출하지 않았습니다</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Grade Modal -->
+    <div x-show="showGradeModal" 
+         x-cloak
+         @click.self="showGradeModal = false"
+         class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-8" @click.stop>
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-2xl font-bold text-slate-900">채점하기</h3>
+                <button @click="showGradeModal = false" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <form @submit.prevent="submitGrade()">
+                <div class="mb-4">
+                    <p class="text-sm text-slate-600 mb-1">학생: <span class="font-bold" x-text="selectedSubmission?.student_name"></span></p>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">점수 *</label>
+                        <input type="text" x-model="gradeData.grade" required
+                               placeholder="예: 100점, A+, 우수"
+                               class="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">피드백</label>
+                        <textarea x-model="gradeData.feedback" rows="4"
+                                  placeholder="학생에게 전달할 피드백을 입력하세요..."
+                                  class="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" @click="showGradeModal = false" class="px-5 py-2 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition">취소</button>
+                    <button type="submit" class="px-5 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition">채점 완료</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function homeworkManager() {
+    return {
+        enabledFeatures: [],
+        homeworks: [],
+        homeworkFilter: 'all',
+        dueDateFilter: 'all',  // 마감기한 필터
+        classFilter: 'all',     // 반별 필터
+        classes: [],
+        filteredClasses: [],
+        classSearchQuery: '',
+        selectedClassIds: [],
+        targetStudentCount: 0,
+        showCreateModal: false,
+        showSubmissionsModal: false,
+        showSubmissionDetailModal: false,
+        showGradeModal: false,
+        selectedHomework: null,
+        selectedSubmission: null,
+        submissions: [],
+        submissionFilter: 'all',
+        submitting: false,
+        submissionStats: {
+            submitted: 0,
+            pending: 0,
+            graded: 0,
+            rate: 0
+        },
+        gradeData: {
+            grade: '',
+            feedback: ''
+        },
+        currentHomework: {
+            title: '',
+            description: '',
+            subject: '',
+            grade_level: '',
+            due_date: ''
+        },
+        
+        async init() {
+            await this.loadEnabledFeatures();
+            await this.loadHomeworks();
+            await this.loadClasses();
+            lucide.createIcons();
+        },
+        
+        async loadEnabledFeatures() {
+            const token = localStorage.getItem('token');
+            if (!token) return window.location.href = '/admin/login';
+            
+            try {
+                const response = await fetch('/api/features/academy', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.status === 401) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/admin/login';
+                    return;
+                }
+                
+                if (response.ok) {
+                    const features = await response.json();
+                    const catalog = {
+                        'students': { name: '학생 관리', icon: 'users' },
+                        'attendance': { name: '출결 관리', icon: 'calendar-check' },
+                        'billing': { name: '청구 및 결제', icon: 'credit-card' },
+                        'homework': { name: '숙제 관리', icon: 'book-open' },
+                        'notices': { name: '공지사항', icon: 'megaphone' },
+                        'counseling': { name: '상담 기록', icon: 'message-circle' }
+                    };
+                    this.enabledFeatures = features
+                        .filter(f => f.enabled)
+                        .map(f => ({ code: f.feature_code, ...catalog[f.feature_code] }));
+                    
+                    this.$nextTick(() => lucide.createIcons());
+                }
+            } catch (error) {
+                console.error('Failed to load features:', error);
+            }
+        },
+        
+        async loadClasses() {
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch('/api/classes', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    this.classes = await response.json();
+                    this.filteredClasses = this.classes;
+                }
+            } catch (error) {
+                console.error('Failed to load classes:', error);
+            }
+        },
+        
+        searchClasses() {
+            const query = this.classSearchQuery.toLowerCase();
+            this.filteredClasses = this.classes.filter(cls => 
+                cls.name.toLowerCase().includes(query) ||
+                (cls.grade_level && cls.grade_level.toLowerCase().includes(query)) ||
+                (cls.subject && cls.subject.toLowerCase().includes(query))
+            );
+        },
+        
+        async updateTargetPreview() {
+            // Calculate target student count
+            const selectedClasses = this.classes.filter(cls => this.selectedClassIds.includes(cls.id));
+            this.targetStudentCount = selectedClasses.reduce((sum, cls) => sum + (cls.student_count || 0), 0);
+        },
+        
+        openCreateModal() {
+            this.showCreateModal = true;
+            this.selectedClassIds = [];
+            this.targetStudentCount = 0;
+            this.classSearchQuery = '';
+            this.filteredClasses = this.classes;
+            this.$nextTick(() => lucide.createIcons());
+        },
+        
+        async loadHomeworks() {
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch('/api/homeworks', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    this.homeworks = await response.json();
+                    this.$nextTick(() => lucide.createIcons());
+                }
+            } catch (error) {
+                console.error('Failed to load homeworks:', error);
+            }
+        },
+        
+        uniqueSubjects() {
+            const subjects = this.homeworks
+                .map(h => h.subject)
+                .filter(s => s && s.trim() !== '');
+            return [...new Set(subjects)];
+        },
+        
+        uniqueGrades() {
+            const grades = this.homeworks
+                .map(h => h.grade_level)
+                .filter(g => g && g.trim() !== '');
+            return [...new Set(grades)];
+        },
+        
+        uniqueClasses() {
+            // 모든 숙제에서 class_names를 수집
+            const classNames = new Set();
+            this.homeworks.forEach(h => {
+                if (h.class_names && Array.isArray(h.class_names)) {
+                    h.class_names.forEach(name => {
+                        if (name && name.trim() !== '') {
+                            classNames.add(name);
+                        }
+                    });
+                }
+            });
+            return Array.from(classNames).sort();
+        },
+        
+        filteredHomeworks() {
+            let filtered = this.homeworks;
+            
+            // 기본 필터 (과목, 학년)
+            if (this.homeworkFilter !== 'all') {
+                filtered = filtered.filter(h => 
+                    h.subject === this.homeworkFilter || h.grade_level === this.homeworkFilter
+                );
+            }
+            
+            // 마감기한별 필터
+            if (this.dueDateFilter !== 'all') {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                const tomorrow = new Date(today);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                
+                const endOfWeek = new Date(today);
+                endOfWeek.setDate(today.getDate() + (7 - today.getDay()));
+                
+                const startOfNextWeek = new Date(endOfWeek);
+                startOfNextWeek.setDate(startOfNextWeek.getDate() + 1);
+                
+                const endOfNextWeek = new Date(startOfNextWeek);
+                endOfNextWeek.setDate(startOfNextWeek.getDate() + 6);
+                
+                filtered = filtered.filter(h => {
+                    if (!h.due_date) return false;
+                    const dueDate = new Date(h.due_date);
+                    dueDate.setHours(0, 0, 0, 0);
+                    
+                    switch (this.dueDateFilter) {
+                        case 'overdue':
+                            return dueDate < today;
+                        case 'today':
+                            return dueDate.getTime() === today.getTime();
+                        case 'tomorrow':
+                            return dueDate.getTime() === tomorrow.getTime();
+                        case 'thisWeek':
+                            return dueDate >= today && dueDate <= endOfWeek;
+                        case 'nextWeek':
+                            return dueDate >= startOfNextWeek && dueDate <= endOfNextWeek;
+                        default:
+                            return true;
+                    }
+                });
+            }
+            
+            // 반별 필터
+            if (this.classFilter !== 'all') {
+                filtered = filtered.filter(h => 
+                    h.class_names && h.class_names.includes(this.classFilter)
+                );
+            }
+            
+            return filtered;
+        },
+        
+        async saveHomework() {
+            if (this.selectedClassIds.length === 0) {
+                alert('⚠️ 대상 반을 선택해주세요');
+                return;
+            }
+            
+            this.submitting = true;
+            const token = localStorage.getItem('token');
+            
+            try {
+                const response = await fetch('/api/homeworks', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        ...this.currentHomework,
+                        class_ids: this.selectedClassIds
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    await this.loadHomeworks();
+                    this.showCreateModal = false;
+                    this.currentHomework = {
+                        title: '',
+                        description: '',
+                        subject: '',
+                        grade_level: '',
+                        due_date: ''
+                    };
+                    this.selectedClassIds = [];
+                    alert(`✅ 숙제가 출제되었습니다!\n대상 학생: ${result.target_count}명`);
+                } else {
+                    const error = await response.json();
+                    alert(`❌ ${error.detail || '숙제 출제에 실패했습니다'}`);
+                }
+            } catch (error) {
+                console.error('Failed to save homework:', error);
+                alert('서버 오류가 발생했습니다');
+            } finally {
+                this.submitting = false;
+            }
+        },
+        
+        async deleteHomework(id) {
+            if (!confirm('정말 이 숙제를 삭제하시겠습니까?')) return;
+            
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch(`/api/homeworks/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    await this.loadHomeworks();
+                    alert('✅ 숙제가 삭제되었습니다');
+                } else {
+                    alert('❌ 삭제에 실패했습니다');
+                }
+            } catch (error) {
+                console.error('Failed to delete homework:', error);
+                alert('서버 오류가 발생했습니다');
+            }
+        },
+        
+        async viewSubmissions(homework) {
+            this.selectedHomework = homework;
+            this.showSubmissionsModal = true;
+            this.submissionFilter = 'all';
+            
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch(`/api/homeworks/${homework.id}/submissions`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    this.submissions = await response.json();
+                    
+                    // Calculate submission stats
+                    const total = this.submissions.length;
+                    const submitted = this.submissions.filter(s => s.status === 'submitted' || s.status === 'graded').length;
+                    const pending = this.submissions.filter(s => s.status === 'pending').length;
+                    const graded = this.submissions.filter(s => s.status === 'graded').length;
+                    
+                    this.submissionStats = {
+                        submitted: submitted,
+                        pending: pending,
+                        graded: graded,
+                        rate: total > 0 ? Math.round((submitted / total) * 100) : 0
+                    };
+                    
+                    this.$nextTick(() => lucide.createIcons());
+                }
+            } catch (error) {
+                console.error('Failed to load submissions:', error);
+                alert('제출 현황을 불러올 수 없습니다');
+            }
+        },
+        
+        filteredSubmissions() {
+            if (this.submissionFilter === 'all') {
+                return this.submissions;
+            } else if (this.submissionFilter === 'submitted') {
+                return this.submissions.filter(s => s.status === 'submitted');
+            } else if (this.submissionFilter === 'pending') {
+                return this.submissions.filter(s => s.status === 'pending');
+            } else if (this.submissionFilter === 'graded') {
+                return this.submissions.filter(s => s.status === 'graded');
+            }
+            return this.submissions;
+        },
+        
+        openSubmissionDetail(submission) {
+            this.selectedSubmission = submission;
+            this.showSubmissionDetailModal = true;
+            this.$nextTick(() => lucide.createIcons());
+        },
+        
+        openGradeModal(submission) {
+            this.selectedSubmission = submission;
+            this.gradeData = {
+                grade: submission.submission?.grade || '',
+                feedback: submission.submission?.feedback || ''
+            };
+            this.showGradeModal = true;
+            this.$nextTick(() => lucide.createIcons());
+        },
+        
+        async submitGrade() {
+            if (!this.gradeData.grade) {
+                alert('점수를 입력해주세요');
+                return;
+            }
+            
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch(`/api/homeworks/submissions/${this.selectedSubmission.submission.id}/grade?grade=${encodeURIComponent(this.gradeData.grade)}&feedback=${encodeURIComponent(this.gradeData.feedback || '')}`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    // Reload submissions
+                    await this.viewSubmissions(this.selectedHomework);
+                    
+                    // Update selected submission for detail modal
+                    const updatedSub = this.submissions.find(s => s.student_id === this.selectedSubmission.student_id);
+                    if (updatedSub) {
+                        this.selectedSubmission = updatedSub;
+                    }
+                    
+                    this.showGradeModal = false;
+                    this.$nextTick(() => lucide.createIcons());
+                    alert('✅ 채점이 완료되었습니다!');
+                } else {
+                    const error = await response.json();
+                    alert(`❌ ${error.detail || '채점에 실패했습니다'}`);
+                }
+            } catch (error) {
+                console.error('Failed to grade submission:', error);
+                alert('서버 오류가 발생했습니다');
+            }
+        },
+        
+        formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+        },
+        
+        formatClassNames(classNames) {
+            if (!classNames || classNames.length === 0) {
+                return '반 없음';
+            }
+            if (classNames.length === 1) {
+                return classNames[0];
+            }
+            if (classNames.length === 2) {
+                return classNames.join(', ');
+            }
+            // 3개 이상일 때: "중2수학반 등 5개"
+            return `${classNames[0]} 등 ${classNames.length}개`;
+        },
+        
+        logout() {
+            localStorage.removeItem('token');
+            window.location.href = '/';
+        }
+    }
+}
+</script>
+{% endblock %}

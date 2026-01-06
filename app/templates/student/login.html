@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}학생/학부모 로그인 - Academy New Normal{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-yellow-50 via-white to-orange-50 relative overflow-hidden">
+    <!-- 배경 장식 요소들 -->
+    <div class="absolute inset-0 overflow-hidden pointer-events-none">
+        <div class="absolute top-20 left-10 w-72 h-72 bg-yellow-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
+        <div class="absolute top-40 right-10 w-72 h-72 bg-orange-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
+        <div class="absolute -bottom-8 left-20 w-72 h-72 bg-red-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
+    </div>
+
+    <!-- 로그인 카드 -->
+    <div class="relative bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md border border-slate-100">
+        <!-- 로고 영역 -->
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl mb-4 shadow-lg">
+                <i data-lucide="user" class="w-8 h-8 text-white"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-slate-800 mb-2">학생/학부모 로그인</h1>
+            <p class="text-slate-500 text-sm">Academy New Normal</p>
+        </div>
+
+        <!-- 카카오 로그인 버튼 -->
+        <a href="/auth/student/kakao" 
+            class="w-full bg-[#FEE500] hover:bg-[#FDD835] text-[#000000] py-4 rounded-xl font-medium flex items-center justify-center transition-all duration-200 transform hover:scale-[1.02] shadow-md hover:shadow-lg">
+            <svg class="w-6 h-6 mr-3" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 3C6.48 3 2 6.58 2 11c0 2.89 1.96 5.43 4.88 6.91-.21.79-.78 2.94-.9 3.41-.16.62.23.61.48.44.19-.13 3.12-2.08 4.56-3.04.66.09 1.32.14 2 .14 5.52 0 10-3.58 10-8S17.52 3 12 3z"/>
+            </svg>
+            카카오로 로그인
+        </a>
+
+        <!-- 구분선 -->
+        <div class="relative my-6">
+            <div class="absolute inset-0 flex items-center">
+                <div class="w-full border-t border-slate-200"></div>
+            </div>
+            <div class="relative flex justify-center text-sm">
+                <span class="px-4 bg-white text-slate-500">또는</span>
+            </div>
+        </div>
+
+        <!-- 이메일 로그인 폼 -->
+        <form id="loginForm" class="space-y-5">
+            <div>
+                <label for="email" class="block text-sm font-medium text-slate-700 mb-2">이메일</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i data-lucide="mail" class="w-5 h-5 text-slate-400"></i>
+                    </div>
+                    <input type="email" id="email" name="email" required 
+                        class="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all"
+                        placeholder="student@example.com">
+                </div>
+            </div>
+
+            <div>
+                <label for="password" class="block text-sm font-medium text-slate-700 mb-2">비밀번호</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i data-lucide="lock" class="w-5 h-5 text-slate-400"></i>
+                    </div>
+                    <input type="password" id="password" name="password" required 
+                        class="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all"
+                        placeholder="••••••••">
+                </div>
+            </div>
+
+            <!-- 에러 메시지 -->
+            <div id="errorMessage" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
+                <div class="flex items-center">
+                    <i data-lucide="alert-circle" class="w-4 h-4 mr-2"></i>
+                    <span id="errorText"></span>
+                </div>
+            </div>
+
+            <!-- 로그인 버튼 -->
+            <button type="submit" 
+                class="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white py-3 rounded-xl font-medium hover:shadow-lg transform hover:scale-[1.02] transition-all duration-200 flex items-center justify-center">
+                <span id="buttonText">로그인</span>
+                <i data-lucide="arrow-right" class="w-5 h-5 ml-2"></i>
+            </button>
+        </form>
+
+        <!-- 하단 링크 -->
+        <div class="mt-6 text-center">
+            <a href="/" class="text-sm text-slate-500 hover:text-slate-700 transition-colors">
+                ← 메인으로 돌아가기
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes blob {
+    0% { transform: translate(0px, 0px) scale(1); }
+    33% { transform: translate(30px, -50px) scale(1.1); }
+    66% { transform: translate(-20px, 20px) scale(0.9); }
+    100% { transform: translate(0px, 0px) scale(1); }
+}
+
+.animate-blob {
+    animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+    animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+    animation-delay: 4s;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    lucide.createIcons();
+    
+    const form = document.getElementById('loginForm');
+    const errorDiv = document.getElementById('errorMessage');
+    const errorText = document.getElementById('errorText');
+    const buttonText = document.getElementById('buttonText');
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Hide previous errors
+        errorDiv.classList.add('hidden');
+        
+        // Show loading state
+        buttonText.textContent = '로그인 중...';
+        
+        const formData = new FormData(form);
+        
+        try {
+            const response = await fetch('/auth/student/login', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                // Store token and redirect
+                localStorage.setItem('access_token', data.access_token);
+                window.location.href = '/student/dashboard';
+            } else {
+                // Show error
+                errorText.textContent = data.detail || '로그인에 실패했습니다.';
+                errorDiv.classList.remove('hidden');
+                buttonText.textContent = '로그인';
+                lucide.createIcons();
+            }
+        } catch (error) {
+            errorText.textContent = '서버 연결에 실패했습니다.';
+            errorDiv.classList.remove('hidden');
+            buttonText.textContent = '로그인';
+            lucide.createIcons();
+        }
+    });
+});
+</script>
+{% endblock %}
+

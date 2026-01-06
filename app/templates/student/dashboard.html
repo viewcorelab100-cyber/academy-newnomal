@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block title %}마이 페이지 - Student{% endblock %}
+
+{% block content %}
+<div x-data="studentDashboard()" x-init="init()" class="min-h-screen bg-[#F4F6F9] pb-24">
+    <!-- Header -->
+    <header class="bg-white px-6 pt-12 pb-6 rounded-b-[2.5rem] shadow-[0_4px_20px_rgb(0,0,0,0.03)] relative z-10">
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-blue-500/30">
+                    <span x-text="studentName.charAt(0)"></span>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                        <span x-text="studentName"></span>
+                        <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full uppercase tracking-wider">Student</span>
+                    </h1>
+                    <p class="text-sm text-slate-500 font-medium" x-text="academyName"></p>
+                </div>
+            </div>
+            <button @click="logout()" class="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+                <i data-lucide="log-out" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <!-- Main Stats Card (Bento Style) -->
+        <div class="grid grid-cols-2 gap-4">
+            <!-- Attendance Widget -->
+            <div class="bg-slate-900 text-white p-5 rounded-2xl shadow-xl shadow-slate-900/20 relative overflow-hidden">
+                <div class="absolute right-0 top-0 w-20 h-20 bg-white/10 rounded-bl-3xl"></div>
+                <div class="relative z-10">
+                    <div class="flex items-center gap-2 mb-3 text-white/70">
+                        <i data-lucide="calendar-check" class="w-4 h-4"></i>
+                        <span class="text-xs font-bold uppercase tracking-wider">이번 달 출석</span>
+                    </div>
+                    <div class="flex items-end gap-1.5">
+                        <span class="text-3xl font-bold" x-text="stats.attendance"></span>
+                        <span class="text-sm font-medium text-white/50 mb-1">일</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Homework Widget -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between group active:scale-95 transition-transform">
+                <div class="flex justify-between items-start">
+                    <div class="p-2 bg-orange-50 text-orange-500 rounded-xl">
+                        <i data-lucide="book-open" class="w-5 h-5"></i>
+                    </div>
+                    <span class="w-2 h-2 rounded-full bg-orange-500" x-show="stats.pendingHomework > 0"></span>
+                </div>
+                <div class="mt-3">
+                    <div class="flex items-center gap-2 mb-1 text-slate-500">
+                        <i data-lucide="list-todo" class="w-3 h-3"></i>
+                        <span class="text-xs font-bold uppercase tracking-wider">미제출 숙제</span>
+                    </div>
+                    <div class="flex items-end gap-1.5">
+                        <span class="text-3xl font-bold text-slate-900" x-text="stats.pendingHomework"></span>
+                        <span class="text-sm font-medium text-slate-400 mb-1">개</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Content Section -->
+    <div class="px-6 py-8 space-y-6">
+        <!-- Quick Actions -->
+        <div>
+            <h2 class="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <i data-lucide="zap" class="w-5 h-5 text-blue-600"></i>
+                빠른 메뉴
+            </h2>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <a :href="`/student/homework?student_id=${studentId}`" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 text-center hover:border-blue-500 transition-colors group">
+                    <div class="w-10 h-10 mx-auto bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                        <i data-lucide="pen-tool" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-sm font-bold text-slate-900 mb-1">숙제 제출</h3>
+                    <p class="text-xs text-slate-500">과제 확인하기</p>
+                </a>
+
+                <a :href="`/student/attendance?student_id=${studentId}`" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 text-center hover:border-green-500 transition-colors group">
+                    <div class="w-10 h-10 mx-auto bg-green-50 text-green-600 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                        <i data-lucide="qr-code" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-sm font-bold text-slate-900 mb-1">출석 QR</h3>
+                    <p class="text-xs text-slate-500">QR 코드 확인</p>
+                </a>
+
+                <a href="/student/notices" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 text-center hover:border-purple-500 transition-colors group">
+                    <div class="w-10 h-10 mx-auto bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                        <i data-lucide="megaphone" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-sm font-bold text-slate-900 mb-1">공지사항</h3>
+                    <p class="text-xs text-slate-500">학원 소식</p>
+                </a>
+
+                <a href="/student/billing" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 text-center hover:border-amber-500 transition-colors group">
+                    <div class="w-10 h-10 mx-auto bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                        <i data-lucide="credit-card" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-sm font-bold text-slate-900 mb-1">수강료</h3>
+                    <p class="text-xs text-slate-500">결제 내역</p>
+                </a>
+            </div>
+        </div>
+
+        <!-- Recent Notices -->
+        <div x-show="recentNotices.length > 0">
+            <h2 class="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <i data-lucide="bell" class="w-5 h-5 text-orange-600"></i>
+                최근 공지사항
+            </h2>
+            
+            <div class="space-y-3">
+                <template x-for="notice in recentNotices" :key="notice.id">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-orange-500 transition-colors">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex-1">
+                                <h3 class="font-bold text-slate-900 mb-1" x-text="notice.title"></h3>
+                                <p class="text-xs text-slate-500" x-text="notice.date"></p>
+                            </div>
+                            <span x-show="notice.is_important" class="px-2 py-1 bg-red-100 text-red-700 text-[10px] font-bold rounded-lg">중요</span>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="fixed bottom-6 left-6 right-6 z-50">
+        <nav class="bg-slate-900 text-slate-400 rounded-2xl shadow-2xl shadow-slate-900/30 px-6 py-4 flex justify-between items-center backdrop-blur-lg bg-opacity-90">
+            <a :href="`/student/dashboard?student_id=${studentId}`" class="flex flex-col items-center gap-1 text-white">
+                <i data-lucide="home" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium">홈</span>
+            </a>
+            <a :href="`/student/attendance?student_id=${studentId}`" class="flex flex-col items-center gap-1 hover:text-white transition-colors">
+                <i data-lucide="calendar" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium">출석</span>
+            </a>
+            <a :href="`/student/homework?student_id=${studentId}`" class="flex flex-col items-center gap-1 hover:text-white transition-colors">
+                <i data-lucide="book" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium">숙제</span>
+            </a>
+            <a href="/student/notices" class="flex flex-col items-center gap-1 hover:text-white transition-colors">
+                <i data-lucide="menu" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium">메뉴</span>
+            </a>
+        </nav>
+    </div>
+</div>
+
+<script>
+function studentDashboard() {
+    return {
+        studentName: '로딩 중...',
+        academyName: '',
+        studentId: null,
+        stats: {
+            attendance: 0,
+            pendingHomework: 0
+        },
+        recentNotices: [],
+        
+        async init() {
+            // Get student_id from URL and store it
+            const urlParams = new URLSearchParams(window.location.search);
+            const studentId = urlParams.get('student_id');
+            if (studentId) {
+                this.studentId = studentId;
+                localStorage.setItem('student_id', studentId);
+            } else {
+                this.studentId = localStorage.getItem('student_id');
+            }
+            
+            const token = this.getTokenFromUrl() || localStorage.getItem('token');
+            if (token) localStorage.setItem('token', token);
+            
+            await this.loadData();
+            lucide.createIcons();
+        },
+        
+        getTokenFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('token');
+        },
+        
+        async loadData() {
+            if (!this.studentId) {
+                // Fallback data
+                this.studentName = '테스트 학생';
+                this.academyName = '테스트 학원';
+                this.stats = { attendance: 22, pendingHomework: 0 };
+                return;
+            }
+            
+            try {
+                // Load homework count
+                const homeworkResponse = await fetch(`/api/homeworks/student/list?student_id=${this.studentId}`);
+                if (homeworkResponse.ok) {
+                    const homeworks = await homeworkResponse.json();
+                    this.stats.pendingHomework = homeworks.filter(h => 
+                        !h.submission || h.submission.status === 'pending'
+                    ).length;
+                }
+                
+                // Load student info
+                const studentResponse = await fetch(`/api/students/${this.studentId}`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` }
+                });
+                if (studentResponse.ok) {
+                    const student = await studentResponse.json();
+                    this.studentName = student.name;
+                }
+            } catch (error) {
+                console.error('Failed to load student data:', error);
+            }
+            
+            // Fallback values
+            if (!this.studentName || this.studentName === '로딩 중...') {
+                this.studentName = '학생';
+            }
+            if (!this.academyName) {
+                this.academyName = '테스트 학원';
+            }
+        },
+        
+        logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('student_id');
+            window.location.href = '/';
+        }
+    }
+}
+</script>
+{% endblock %}
